@@ -1,0 +1,79 @@
+{% extends 'dashboard/admin_base.html' %}
+
+{% block title %}Manage Customers | BusGo Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Customer Management</h4>
+    <small class="text-muted">Search, monitor and manage customer accounts & block statuses</small>
+  </div>
+</div>
+
+<div class="card-modern p-4">
+  <!-- Search Filter -->
+  <form method="GET" class="row g-2 mb-4">
+    <div class="col-md-6 col-lg-4">
+      <div class="input-group">
+        <input type="text" name="q" class="form-control form-control-sm" placeholder="Search by name, email, phone..." value="{{ query }}">
+        <button class="btn btn-sm btn-primary px-3" type="submit">
+          <i class="fa-solid fa-magnifying-glass"></i> Search
+        </button>
+      </div>
+    </div>
+    {% if query %}
+      <div class="col-auto">
+        <a href="{% url 'dashboard:admin_customers' %}" class="btn btn-sm btn-light border">Clear</a>
+      </div>
+    {% endif %}
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle small mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>User</th>
+          <th>Contact Email</th>
+          <th>Phone</th>
+          <th>City / State</th>
+          <th>Wallet Balance</th>
+          <th>Joined On</th>
+          <th>Status</th>
+          <th class="text-center">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in customers %}
+          <tr>
+            <td>
+              <div class="fw-bold text-dark">{{ c.user.get_full_name|default:c.user.username }}</div>
+              <small class="text-muted">@{{ c.user.username }}</small>
+            </td>
+            <td>{{ c.user.email }}</td>
+            <td>{{ c.phone_number|default:'Not provided' }}</td>
+            <td>{{ c.city|default:'-' }}, {{ c.state|default:'-' }}</td>
+            <td class="fw-bold text-success">₹{{ c.wallet_balance|floatformat:1 }}</td>
+            <td>{{ c.created_at|date:"d M Y" }}</td>
+            <td>
+              {% if c.is_blocked %}
+                <span class="badge bg-danger rounded-pill px-3 py-1">Blocked</span>
+              {% else %}
+                <span class="badge bg-success rounded-pill px-3 py-1">Active</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <a href="{% url 'dashboard:admin_toggle_customer_block' c.id %}" class="btn btn-sm {% if c.is_blocked %}btn-success{% else %}btn-outline-danger{% endif %} rounded-pill px-3" onclick="return confirm('Change block status for this user?');">
+                {% if c.is_blocked %}Unblock{% else %}Block{% endif %}
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">No customers found matching search criteria.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

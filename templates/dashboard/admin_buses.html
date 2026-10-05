@@ -1,0 +1,131 @@
+{% extends 'dashboard/admin_base.html' %}
+
+{% block title %}Manage Bus Fleets | BusGo Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Bus Fleets & Coaches</h4>
+    <small class="text-muted">Register coaches, manage operators, and configure seating architectures</small>
+  </div>
+  <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" data-bs-toggle="collapse" data-bs-target="#addBusForm">
+    <i class="fa-solid fa-plus me-1"></i> Register New Bus
+  </button>
+</div>
+
+<!-- Add Bus Form -->
+<div class="collapse mb-4" id="addBusForm">
+  <div class="card-modern p-4">
+    <h5 class="fw-bold text-dark mb-3">Add New Bus to Fleet</h5>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label small fw-bold text-muted">Operator *</label>
+          <select name="operator" class="form-select" required>
+            {% for op in operators %}
+              <option value="{{ op.id }}">{{ op.company_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-bold text-muted">Bus Type & Layout *</label>
+          <select name="bus_type" class="form-select" required>
+            {% for bt in bus_types %}
+              <option value="{{ bt.id }}">{{ bt.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-bold text-muted">Bus Name / Service *</label>
+          <input type="text" name="bus_name" class="form-control" placeholder="e.g. Royal Grand Luxury Volvo" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-bold text-muted">Registration Number *</label>
+          <input type="text" name="bus_number" class="form-control font-monospace" placeholder="e.g. GJ-01-AX-9900" required>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label small fw-bold text-muted">Amenities Included</label>
+          <div class="d-flex flex-wrap gap-3 mt-1">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="has_wifi" id="wf" checked>
+              <label class="form-check-label small" for="wf">Wi-Fi</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="has_charging" id="ch" checked>
+              <label class="form-check-label small" for="ch">USB Charging</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="has_water" id="wt" checked>
+              <label class="form-check-label small" for="wt">Water Bottle</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="has_blanket" id="bl" checked>
+              <label class="form-check-label small" for="bl">Blanket</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Register Bus & Auto-Generate Seats</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Buses Listing -->
+<div class="card-modern p-4">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle small mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Bus Fleet / Number</th>
+          <th>Operator</th>
+          <th>Coach Type</th>
+          <th>Seating Capacity</th>
+          <th>Rating</th>
+          <th>Amenities</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in buses %}
+          <tr>
+            <td>
+              <div class="fw-bold text-dark fs-6">{{ b.bus_name }}</div>
+              <span class="badge bg-light text-primary border font-monospace">{{ b.bus_number }}</span>
+            </td>
+            <td><strong>{{ b.operator.company_name }}</strong></td>
+            <td>{{ b.bus_type.name }}</td>
+            <td>
+              <span class="badge bg-info-subtle text-info rounded-pill px-3">
+                {{ b.seats.count }} Seats
+              </span>
+            </td>
+            <td><span class="badge bg-success">★ {{ b.rating }}</span></td>
+            <td>
+              <div class="d-flex gap-2 text-muted">
+                {% if b.has_wifi %}<i class="fa-solid fa-wifi text-primary" title="WiFi"></i>{% endif %}
+                {% if b.has_charging %}<i class="fa-solid fa-plug text-warning" title="Charging"></i>{% endif %}
+                {% if b.has_water %}<i class="fa-solid fa-bottle-water text-info" title="Water"></i>{% endif %}
+                {% if b.has_blanket %}<i class="fa-solid fa-sheet-plastic text-secondary" title="Blanket"></i>{% endif %}
+              </div>
+            </td>
+            <td>
+              {% if b.is_active %}
+                <span class="badge bg-success rounded-pill px-3">Active</span>
+              {% else %}
+                <span class="badge bg-secondary rounded-pill px-3">Inactive</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">No buses registered yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

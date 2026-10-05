@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+
+{% block title %}Secure Payment | BusGo{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <!-- Stepper Header -->
+  <div class="row mb-4">
+    <div class="col-lg-10 mx-auto">
+      <div class="d-flex align-items-center justify-content-between p-3 bg-white rounded-4 border shadow-sm">
+        <div class="d-flex align-items-center gap-2 text-success fw-bold">
+          <i class="fa-solid fa-circle-check"></i> Seats Selected
+        </div>
+        <i class="fa-solid fa-arrow-right text-muted small"></i>
+        <div class="d-flex align-items-center gap-2 text-success fw-bold">
+          <i class="fa-solid fa-circle-check"></i> Passengers Added
+        </div>
+        <i class="fa-solid fa-arrow-right text-muted small"></i>
+        <div class="d-flex align-items-center gap-2 text-primary fw-bold">
+          <span class="badge bg-primary rounded-circle p-2">3</span> Payment
+        </div>
+        <i class="fa-solid fa-arrow-right text-muted small"></i>
+        <div class="d-flex align-items-center gap-2 text-muted fw-semibold">
+          <span class="badge bg-light text-secondary rounded-circle p-2">4</span> Digital Ticket
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <!-- Countdown Timer Strip -->
+      <div class="alert alert-warning border-0 rounded-4 shadow-sm d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left fs-5 text-warning"></i>
+          <div>
+            <strong>Temporary Concurrency Seat Lock:</strong> Please complete payment within the time limit.
+          </div>
+        </div>
+        <div class="fs-5 fw-extrabold font-monospace text-dark bg-white px-3 py-1 rounded-3 border" id="countdownTimer">
+          09:45
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <!-- Left: Payment Form & Methods -->
+        <div class="col-lg-7">
+          <div class="card-modern p-4">
+            <h5 class="fw-bold text-dark mb-4"><i class="fa-solid fa-shield-halved text-success me-2"></i> Select Payment Method</h5>
+
+            <form method="POST" action="{% url 'bookings:payment' booking.booking_id %}" id="paymentForm">
+              {% csrf_token %}
+              <input type="hidden" name="action" id="paymentAction" value="pay_success">
+
+              <!-- Nav tabs for Payment methods -->
+              <ul class="nav nav-pills mb-4 nav-justified bg-light p-1 rounded-3 border" id="paymentMethodTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active rounded-3 py-2 fw-bold small" id="upi-tab" data-bs-toggle="pill" data-bs-target="#upi-pane" type="button" role="tab">
+                    <i class="fa-brands fa-google-pay me-1"></i> UPI
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link rounded-3 py-2 fw-bold small" id="card-tab" data-bs-toggle="pill" data-bs-target="#card-pane" type="button" role="tab">
+                    <i class="fa-solid fa-credit-card me-1"></i> Cards
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link rounded-3 py-2 fw-bold small" id="netbanking-tab" data-bs-toggle="pill" data-bs-target="#netbanking-pane" type="button" role="tab">
+                    <i class="fa-solid fa-building-columns me-1"></i> Net Banking
+                  </button>
+                </li>
+                <!-- Wallet payment option removed -->
+              </ul>
+
+              <input type="hidden" name="payment_method" id="selectedPaymentMethod" value="upi">
+
+              <!-- Tab Contents -->
+              <div class="tab-content" id="paymentTabsContent">
+                <!-- 1. UPI Pane -->
+                <div class="tab-pane fade show active" id="upi-pane" role="tabpanel">
+                  <div class="p-3 bg-light rounded-3 border mb-3 text-center">
+                    <div class="text-muted small mb-2">Scan & Pay via any UPI App</div>
+                    <div class="bg-white p-2 d-inline-block rounded border shadow-sm mb-2">
+                      <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=busgo@icici&pn=BusGoTravel&am={{ booking.total_amount }}&cu=INR" alt="UPI QR" width="130" height="130">
+                    </div>
+                    <div class="small fw-semibold text-secondary">Google Pay &bull; PhonePe &bull; Paytm &bull; BHIM</div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Or enter your UPI VPA / ID</label>
+                    <input type="text" name="upi_id" class="form-control" placeholder="e.g. yourname@okhdfcbank" value="user@okhdfcbank">
+                  </div>
+                </div>
+
+                <!-- 2. Cards Pane -->
+                <div class="tab-pane fade" id="card-pane" role="tabpanel">
+                  <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Card Number</label>
+                    <div class="input-group">
+                      <span class="input-group-text bg-white text-muted"><i class="fa-regular fa-credit-card"></i></span>
+                      <input type="text" name="card_number" class="form-control font-monospace" placeholder="4242 •••• •••• 4242" value="4242 8899 1234 4242">
+                    </div>
+                  </div>
+
+                  <div class="row g-2 mb-3">
+                    <div class="col-7">
+                      <label class="form-label small fw-bold text-muted">Valid Thru (MM/YY)</label>
+                      <input type="text" class="form-control font-monospace" placeholder="12/28" value="12/28">
+                    </div>
+                    <div class="col-5">
+                      <label class="form-label small fw-bold text-muted">CVV / CVC</label>
+                      <input type="password" class="form-control font-monospace" placeholder="•••" maxlength="4" value="123">
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Name on Card</label>
+                    <input type="text" class="form-control" placeholder="Name as printed on card" value="{{ user.get_full_name|default:user.username }}">
+                  </div>
+                </div>
+
+                <!-- 3. Net Banking Pane -->
+                <div class="tab-pane fade" id="netbanking-pane" role="tabpanel">
+                  <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Select Your Bank</label>
+                    <select name="bank_name" class="form-select">
+                      <option value="HDFC Bank" selected>HDFC Bank</option>
+                      <option value="State Bank of India">State Bank of India (SBI)</option>
+                      <option value="ICICI Bank">ICICI Bank</option>
+                      <option value="Axis Bank">Axis Bank</option>
+                      <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
+                      <option value="Punjab National Bank">Punjab National Bank</option>
+                    </select>
+                  </div>
+                  <div class="small text-muted p-3 bg-light rounded border">
+                    <i class="fa-solid fa-lock text-success me-1"></i> You will be redirected to your bank's secure authorization portal.
+                  </div>
+                </div>
+
+                <!-- Wallet pane removed -->
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="mt-4 pt-3 border-top d-flex flex-column gap-2">
+                <button type="submit" class="btn btn-success btn-lg w-100 fw-bold rounded-pill shadow" id="btnPayNow">
+                  <i class="fa-solid fa-lock me-2"></i> Pay ₹{{ booking.total_amount|floatformat:2 }} & Confirm
+                </button>
+                
+                <button type="button" class="btn btn-outline-danger btn-sm rounded-pill mt-2" id="btnSimulateFail">
+                  <i class="fa-solid fa-triangle-exclamation me-1"></i> Simulate Payment Failure (Test Mode)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Right: Booking Overview Card -->
+        <div class="col-lg-5">
+          <div class="card-modern p-4">
+            <h5 class="fw-bold text-dark mb-3">Booking Details</h5>
+
+            <div class="p-3 bg-light rounded-3 mb-3 border">
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted small">PNR / ID:</span>
+                <span class="font-monospace fw-bold text-primary">{{ booking.booking_id }}</span>
+              </div>
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted small">Bus Operator:</span>
+                <span class="fw-bold text-dark">{{ booking.schedule.bus.operator.company_name }}</span>
+              </div>
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted small">Bus Fleet:</span>
+                <span class="small text-dark">{{ booking.schedule.bus.bus_name }}</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted small">Journey Date:</span>
+                <span class="fw-bold text-dark">{{ booking.schedule.departure_date|date:"d M Y" }} ({{ booking.schedule.departure_time|time:"H:i" }})</span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <div class="small fw-bold text-muted text-uppercase mb-1">Route:</div>
+              <div class="fw-bold text-dark">{{ booking.schedule.route.origin.name }} &rarr; {{ booking.schedule.route.destination.name }}</div>
+              <small class="text-muted">Seats: {{ booking.seat_numbers_display }} ({{ booking.total_seats }} seats)</small>
+            </div>
+
+            <hr>
+
+            <div class="d-flex justify-content-between small text-secondary mb-1">
+              <span>Base Ticket Price:</span>
+              <span>₹{{ booking.base_fare|floatformat:2 }}</span>
+            </div>
+            <div class="d-flex justify-content-between small text-secondary mb-1">
+              <span>Taxes (5% GST):</span>
+              <span>₹{{ booking.tax_amount|floatformat:2 }}</span>
+            </div>
+            <div class="d-flex justify-content-between small text-secondary mb-1">
+              <span>Convenience Fee:</span>
+              <span>₹{{ booking.convenience_fee|floatformat:2 }}</span>
+            </div>
+            {% if booking.discount_amount > 0 %}
+              <div class="d-flex justify-content-between small text-success mb-1">
+                <span>Promotional Discount:</span>
+                <span>-₹{{ booking.discount_amount|floatformat:2 }}</span>
+              </div>
+            {% endif %}
+
+            <hr class="my-2">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="fw-bold text-dark fs-5">Total Paid Amount:</span>
+              <span class="fw-extrabold text-primary fs-4">₹{{ booking.total_amount|floatformat:2 }}</span>
+            </div>
+
+            <div class="small text-muted text-center">
+              <i class="fa-solid fa-lock text-success me-1"></i> Mock payment environment. No real funds charged.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Countdown Timer
+  let timeLeft = 600; // 10 minutes
+  const timerEl = document.getElementById('countdownTimer');
+  const timerInterval = setInterval(() => {
+    timeLeft--;
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      alert("Your temporary seat reservation has expired. Please select your seats again.");
+      window.location.href = "{% url 'buses:search' %}";
+      return;
+    }
+    const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+    const secs = (timeLeft % 60).toString().padStart(2, '0');
+    timerEl.innerText = `${mins}:${secs}`;
+  }, 1000);
+
+  // Tab change update payment method
+  const methodInput = document.getElementById('selectedPaymentMethod');
+  document.getElementById('upi-tab').addEventListener('click', () => methodInput.value = 'upi');
+  document.getElementById('card-tab').addEventListener('click', () => methodInput.value = 'card');
+  document.getElementById('netbanking-tab').addEventListener('click', () => methodInput.value = 'netbanking');
+
+  // Simulate payment failure button
+  document.getElementById('btnSimulateFail')?.addEventListener('click', function() {
+    document.getElementById('paymentAction').value = 'pay_fail';
+    document.getElementById('paymentForm').submit();
+  });
+</script>
+{% endblock %}

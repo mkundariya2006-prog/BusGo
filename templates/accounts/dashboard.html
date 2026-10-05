@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+
+{% block title %}My Bookings Dashboard | BusGo{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <!-- Greeting Header -->
+  <div class="mb-4">
+    <h3 class="fw-bold text-dark mb-1">Welcome back, {{ user.first_name|default:user.username }}!</h3>
+    <p class="text-secondary small mb-0">Here's what's happening with your bookings today</p>
+  </div>
+
+  <!-- KPI Top Stats removed per user request -->
+
+  <!-- Dual Column Layout (Matching Mockup 1) -->
+  <div class="row g-4 mb-5">
+    <!-- Left: Recent Bookings -->
+    <div class="col-lg-6">
+      <div class="card-modern p-4 h-100 d-flex flex-column justify-content-between">
+        <div>
+          <h5 class="fw-bold text-dark mb-3">Recent Bookings</h5>
+          <div class="d-flex flex-column gap-3">
+            {% for b in recent_bookings %}
+              <div class="p-3 bg-light rounded-3 border d-flex align-items-center justify-content-between">
+                <div>
+                  <div class="fw-bold text-dark fs-6">{{ b.schedule.route.origin.name }} &rarr; {{ b.schedule.route.destination.name }}</div>
+                  <small class="text-muted font-monospace">PNR: {{ b.booking_id }}</small>
+                </div>
+                <div class="text-end">
+                  <div class="fw-bold text-dark fs-6">₹{{ b.total_amount|floatformat:0 }}</div>
+                  <span class="badge {% if b.booking_status == 'confirmed' %}bg-success-subtle text-success{% elif b.booking_status == 'completed' %}bg-secondary-subtle text-secondary{% else %}bg-danger-subtle text-danger{% endif %} rounded-pill px-2 py-1 small">
+                    {{ b.booking_status }}
+                  </span>
+                </div>
+              </div>
+            {% empty %}
+              <p class="text-muted small">No recent bookings found.</p>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="pt-3 border-top mt-3 text-center">
+          <a href="#allBookingsTabs" class="fw-bold text-primary text-decoration-none small">
+            View All Bookings &rarr;
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Popular Routes -->
+    <div class="col-lg-6">
+      <div class="card-modern p-4 h-100 d-flex flex-column justify-content-between">
+        <div>
+          <h5 class="fw-bold text-dark mb-3">Popular Routes</h5>
+          <div class="d-flex flex-column gap-3">
+            {% for r in popular_routes %}
+              <a href="{% url 'buses:search' %}?origin={{ r.origin.name }}&destination={{ r.destination.name }}" class="text-decoration-none">
+                <div class="p-3 bg-light rounded-3 border d-flex align-items-center justify-content-between text-dark hover-shadow">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-bus text-primary"></i>
+                    <span class="fw-bold">{{ r.origin.name }} &rarr; {{ r.destination.name }}</span>
+                  </div>
+                  <i class="fa-solid fa-arrow-right text-muted small"></i>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="pt-3 border-top mt-3 text-center">
+          <a href="{% url 'buses:search' %}" class="fw-bold text-primary text-decoration-none small">
+            Search All Routes &rarr;
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Bookings Tabs (Upcoming, Completed, Cancelled) -->
+  <div id="allBookingsTabs" class="card-modern p-4">
+    <h4 class="fw-bold text-dark mb-3"><i class="fa-solid fa-ticket me-2 text-primary"></i> Manage Your Journeys</h4>
+
+    <ul class="nav nav-pills mb-4 bg-light p-1 rounded-3 border" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active rounded-3 px-4 py-2 fw-bold" id="upcoming-tab" data-bs-toggle="pill" data-bs-target="#upcoming-pane" type="button" role="tab">
+          Upcoming Journeys ({{ upcoming_bookings|length }})
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link rounded-3 px-4 py-2 fw-bold" id="completed-tab" data-bs-toggle="pill" data-bs-target="#completed-pane" type="button" role="tab">
+          Completed ({{ completed_bookings|length }})
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link rounded-3 px-4 py-2 fw-bold" id="cancelled-tab" data-bs-toggle="pill" data-bs-target="#cancelled-pane" type="button" role="tab">
+          Cancelled ({{ cancelled_bookings|length }})
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <!-- Upcoming Journeys Tab -->
+      <div class="tab-pane fade show active" id="upcoming-pane" role="tabpanel">
+        <div class="row g-3">
+          {% for b in upcoming_bookings %}
+            <div class="col-12">
+              <div class="p-3 bg-light rounded-4 border d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-primary rounded-pill px-3">{{ b.booking_id }}</span>
+                    <span class="badge bg-success rounded-pill px-3">CONFIRMED</span>
+                  </div>
+                  <h5 class="fw-bold text-dark mb-1">{{ b.schedule.route.origin.name }} &rarr; {{ b.schedule.route.destination.name }}</h5>
+                  <div class="small text-secondary">
+                    <i class="fa-regular fa-calendar me-1"></i> {{ b.schedule.departure_date|date:"d M Y" }} at {{ b.schedule.departure_time|time:"H:i" }} &bull;
+                    <i class="fa-solid fa-bus me-1"></i> {{ b.schedule.bus.bus_name }} &bull;
+                    <strong>Seats:</strong> {{ b.seat_numbers_display }}
+                  </div>
+                </div>
+
+                <div class="text-md-end">
+                  <div class="fs-5 fw-extrabold text-primary mb-2">₹{{ b.total_amount|floatformat:0 }}</div>
+                  <div class="d-flex gap-2">
+                    <a href="{% url 'bookings:ticket' b.booking_id %}" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold">
+                      View Ticket
+                    </a>
+                    <a href="{% url 'bookings:download_ticket' b.booking_id %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                      <i class="fa-solid fa-download"></i> PDF
+                    </a>
+                    <a href="{% url 'bookings:cancel_booking' b.booking_id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                      Cancel
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="p-4 text-center text-muted small">No upcoming journeys. <a href="{% url 'home' %}">Book a bus now &rarr;</a></div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Completed Journeys Tab -->
+      <div class="tab-pane fade" id="completed-pane" role="tabpanel">
+        <div class="row g-3">
+          {% for b in completed_bookings %}
+            <div class="col-12">
+              <div class="p-3 bg-light rounded-4 border d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-secondary rounded-pill px-3">{{ b.booking_id }}</span>
+                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3">COMPLETED</span>
+                  </div>
+                  <h5 class="fw-bold text-dark mb-1">{{ b.schedule.route.origin.name }} &rarr; {{ b.schedule.route.destination.name }}</h5>
+                  <small class="text-muted">Travelled on {{ b.schedule.departure_date|date:"d M Y" }} &bull; Seats: {{ b.seat_numbers_display }}</small>
+                </div>
+                <div class="text-md-end">
+                  <div class="fs-5 fw-bold text-dark mb-2">₹{{ b.total_amount|floatformat:0 }}</div>
+                  <a href="{% url 'bookings:ticket' b.booking_id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    View Invoice
+                  </a>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="p-4 text-center text-muted small">No completed journeys.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Cancelled Journeys Tab -->
+      <div class="tab-pane fade" id="cancelled-pane" role="tabpanel">
+        <div class="row g-3">
+          {% for b in cancelled_bookings %}
+            <div class="col-12">
+              <div class="p-3 bg-light rounded-4 border d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-danger rounded-pill px-3">{{ b.booking_id }}</span>
+                    <span class="badge bg-danger-subtle text-danger rounded-pill px-3">CANCELLED</span>
+                  </div>
+                  <h5 class="fw-bold text-dark mb-1">{{ b.schedule.route.origin.name }} &rarr; {{ b.schedule.route.destination.name }}</h5>
+                  <small class="text-muted">Journey was scheduled for {{ b.schedule.departure_date|date:"d M Y" }}</small>
+                </div>
+                <div class="text-md-end">
+                  <div class="fs-6 fw-bold text-danger mb-1">Cancelled</div>
+                  <a href="{% url 'bookings:ticket' b.booking_id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    View Receipt
+                  </a>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="p-4 text-center text-muted small">No cancelled bookings.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

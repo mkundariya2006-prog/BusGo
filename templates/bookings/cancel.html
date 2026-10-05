@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Cancel Ticket – PNR {{ booking.booking_id }} | BusGo{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card-modern p-4 mb-4">
+        <!-- Title -->
+        <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+          <div class="rounded-circle bg-danger-subtle text-danger d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; font-size: 1.5rem;">
+            <i class="fa-solid fa-ticket-simple"></i>
+          </div>
+          <div>
+            <h4 class="fw-bold text-dark mb-1">Cancel Bus Ticket</h4>
+            <span class="text-muted small">PNR: <strong>{{ booking.booking_id }}</strong> &bull; {{ booking.schedule.route }}</span>
+          </div>
+        </div>
+
+        <!-- Cancellation Policy Matrix -->
+        <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-file-contract text-primary me-2"></i> BusGo Transparent Cancellation Policy</h6>
+        <div class="table-responsive mb-4">
+          <table class="table table-bordered small align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Time Prior to Departure</th>
+                <th>Cancellation Fee</th>
+                <th>Refund Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="{% if fee_pct == 10 %}table-success fw-bold{% endif %}">
+                <td>More than 24 hours before journey</td>
+                <td>10% fee</td>
+                <td>90% Refund</td>
+              </tr>
+              <tr class="{% if fee_pct == 25 %}table-success fw-bold{% endif %}">
+                <td>Between 12 to 24 hours before journey</td>
+                <td>25% fee</td>
+                <td>75% Refund</td>
+              </tr>
+              <tr class="{% if fee_pct == 50 %}table-success fw-bold{% endif %}">
+                <td>Between 2 to 12 hours before journey</td>
+                <td>50% fee</td>
+                <td>50% Refund</td>
+              </tr>
+              <tr class="{% if fee_pct == 100 %}table-danger fw-bold{% endif %}">
+                <td>Less than 2 hours before journey</td>
+                <td>100% fee</td>
+                <td>Non-Refundable</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Live Refund Calculation for this Ticket -->
+        <div class="p-4 bg-light rounded-4 border mb-4">
+          <h6 class="fw-bold text-dark mb-3">Refund Calculation for Your Booking</h6>
+          
+          <div class="d-flex justify-content-between small text-secondary mb-2">
+            <span>Total Fare Paid:</span>
+            <span class="fw-bold text-dark">₹{{ booking.total_amount|floatformat:2 }}</span>
+          </div>
+
+          <div class="d-flex justify-content-between small text-danger mb-2">
+            <span>Cancellation Fee ({{ fee_pct }}%):</span>
+            <span class="fw-bold">- ₹{{ cancellation_fee|floatformat:2 }}</span>
+          </div>
+
+          <hr class="my-2">
+
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fs-5 fw-bold text-dark">Total Refund Amount:</span>
+              <small class="text-muted d-block">Will be added to your BusGo store credit balance instantly</small>
+            </div>
+            <span class="fs-3 fw-extrabold text-success">₹{{ refund_amount|floatformat:2 }}</span>
+          </div>
+        </div>
+
+        <!-- Cancellation Form -->
+        <form method="POST">
+          {% csrf_token %}
+          <div class="mb-4">
+            <label class="form-label small fw-bold text-muted">Reason for Cancellation *</label>
+            <select name="reason" class="form-select" required>
+              <option value="Change of travel plans" selected>Change of travel plans</option>
+              <option value="Booked wrong bus or timing">Booked wrong bus or timing</option>
+              <option value="Emergency or personal reasons">Emergency or personal reasons</option>
+              <option value="Found alternative transportation">Found alternative transportation</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="d-flex gap-3">
+            <a href="{% url 'accounts:dashboard' %}" class="btn btn-light rounded-pill px-4 fw-bold">
+              Keep My Ticket
+            </a>
+            <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold flex-grow-1" onclick="return confirm('Are you sure you want to cancel this booking? This action releases your seats.');">
+              <i class="fa-solid fa-ban me-2"></i> Confirm Cancellation & Refund ₹{{ refund_amount }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

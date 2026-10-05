@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In to BusGo{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card-modern p-4 p-md-5">
+        <div class="text-center mb-4">
+          <div class="brand-icon mx-auto mb-2" style="width: 48px; height: 48px; font-size: 1.4rem;">
+            <i class="fa-solid fa-bus"></i>
+          </div>
+          <h4 class="fw-bold text-dark">Sign In to BusGo</h4>
+          <p class="text-muted small">Manage bookings, view live tickets, and access discounts</p>
+        </div>
+
+        <form method="POST">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-muted">Username or Email</label>
+            {{ form.username }}
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <label class="form-label small fw-bold text-muted mb-0">Password</label>
+            </div>
+            {{ form.password }}
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 fw-bold py-2 rounded-pill mt-3">
+            Sign In &rarr;
+          </button>
+        </form>
+
+        <!-- Quick Demo Credentials Helper -->
+        <div class="mt-4 pt-3 border-top">
+          <small class="text-muted fw-bold text-uppercase d-block mb-2" style="font-size: 0.72rem;">Quick Demo Logins (Click to autofill):</small>
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 autofill-btn" data-u="customer" data-p="customer123">
+              <i class="fa-solid fa-user me-1"></i> Customer
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 autofill-btn" data-u="operator" data-p="operator123">
+              <i class="fa-solid fa-bus me-1"></i> Operator
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 autofill-btn" data-u="admin" data-p="admin123">
+              <i class="fa-solid fa-shield-halved me-1"></i> Admin
+            </button>
+          </div>
+        </div>
+
+        <div class="text-center mt-4 pt-2 small text-muted">
+          Don't have an account? <a href="{% url 'accounts:register' %}" class="fw-bold text-primary text-decoration-none">Register Free</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.autofill-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const u = this.getAttribute('data-u');
+      const p = this.getAttribute('data-p');
+      document.querySelector('input[name="username"]').value = u;
+      document.querySelector('input[name="password"]').value = p;
+    });
+  });
+</script>
+{% endblock %}

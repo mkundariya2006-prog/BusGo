@@ -1,0 +1,98 @@
+{% extends 'dashboard/admin_base.html' %}
+
+{% block title %}Manage Routes | BusGo Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Intercity Bus Routes</h4>
+    <small class="text-muted">Connect cities, set standard distances and estimated travel durations</small>
+  </div>
+  <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" data-bs-toggle="collapse" data-bs-target="#addRouteForm">
+    <i class="fa-solid fa-plus me-1"></i> Add New Route
+  </button>
+</div>
+
+<!-- Add Route Form -->
+<div class="collapse mb-4" id="addRouteForm">
+  <div class="card-modern p-4">
+    <h5 class="fw-bold text-dark mb-3">Add Connecting Route</h5>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted">Origin City *</label>
+          <select name="origin" class="form-select" required>
+            {% for c in cities %}
+              <option value="{{ c.id }}">{{ c.name }}{% if c.district %} ({{ c.district }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted">Destination City *</label>
+          <select name="destination" class="form-select" required>
+            {% for c in cities %}
+              <option value="{{ c.id }}">{{ c.name }}{% if c.district %} ({{ c.district }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted">Distance (km) *</label>
+          <input type="number" name="distance_km" class="form-control" value="350" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted">Est. Duration (hours) *</label>
+          <input type="number" step="0.5" name="duration_hours" class="form-control" value="6.0" required>
+        </div>
+      </div>
+      <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Create Route</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Routes Listing -->
+<div class="card-modern p-4">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle small mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Origin</th>
+          <th>Destination</th>
+          <th>Distance</th>
+          <th>Est. Duration</th>
+          <th>Active Schedules</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in routes %}
+          <tr>
+            <td class="fw-bold text-primary">{{ r.origin.name }}</td>
+            <td class="fw-bold text-dark">{{ r.destination.name }}</td>
+            <td>{{ r.distance_km }} km</td>
+            <td>~{{ r.estimated_duration_hours }} hours</td>
+            <td>
+              <span class="badge bg-primary-subtle text-primary rounded-pill px-3">
+                {{ r.schedules.count }} Trips
+              </span>
+            </td>
+            <td>
+              {% if r.is_active %}
+                <span class="badge bg-success rounded-pill px-3">Active</span>
+              {% else %}
+                <span class="badge bg-secondary rounded-pill px-3">Inactive</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">No routes configured yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

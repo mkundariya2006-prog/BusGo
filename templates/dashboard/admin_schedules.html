@@ -1,0 +1,113 @@
+{% extends 'dashboard/admin_base.html' %}
+
+{% block title %}Bus Schedules | BusGo Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Bus Timetables & Schedules</h4>
+    <small class="text-muted">Manage departures, arrival estimates, base ticket pricing, and seat inventories</small>
+  </div>
+  <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" data-bs-toggle="collapse" data-bs-target="#addScheduleForm">
+    <i class="fa-solid fa-plus me-1"></i> Publish Schedule
+  </button>
+</div>
+
+<!-- Add Schedule Form -->
+<div class="collapse mb-4" id="addScheduleForm">
+  <div class="card-modern p-4">
+    <h5 class="fw-bold text-dark mb-3">Publish Bus Schedule</h5>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label small fw-bold text-muted">Select Bus *</label>
+          <select name="bus" class="form-select" required>
+            {% for b in buses %}
+              <option value="{{ b.id }}">{{ b.bus_name }} ({{ b.operator.company_name }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-bold text-muted">Select Route *</label>
+          <select name="route" class="form-select" required>
+            {% for r in routes %}
+              <option value="{{ r.id }}">{{ r.origin.name }} &rarr; {{ r.destination.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-bold text-muted">Base Ticket Fare (₹) *</label>
+          <input type="number" step="10" name="base_price" class="form-control" value="850" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted">Departure Date *</label>
+          <input type="date" name="departure_date" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted">Departure Time *</label>
+          <input type="time" name="departure_time" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted">Arrival Date *</label>
+          <input type="date" name="arrival_date" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted">Arrival Time *</label>
+          <input type="time" name="arrival_time" class="form-control" required>
+        </div>
+      </div>
+      <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Publish & Initialize Seats</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Schedules List -->
+<div class="card-modern p-4">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle small mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Bus & Operator</th>
+          <th>Route</th>
+          <th>Departure</th>
+          <th>Arrival</th>
+          <th>Duration</th>
+          <th>Base Fare</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in schedules %}
+          <tr>
+            <td>
+              <div class="fw-bold text-dark">{{ s.bus.bus_name }}</div>
+              <small class="text-muted">{{ s.bus.operator.company_name }} &bull; {{ s.bus.bus_number }}</small>
+            </td>
+            <td>
+              <span class="fw-bold text-primary">{{ s.route.origin.name }} &rarr; {{ s.route.destination.name }}</span>
+            </td>
+            <td>
+              <div>{{ s.departure_date|date:"d M Y" }}</div>
+              <strong>{{ s.departure_time|time:"H:i" }}</strong>
+            </td>
+            <td>
+              <div>{{ s.arrival_date|date:"d M Y" }}</div>
+              <strong>{{ s.arrival_time|time:"H:i" }}</strong>
+            </td>
+            <td><span class="badge bg-light text-dark border">{{ s.duration_display }}</span></td>
+            <td class="fw-bold text-success fs-6">₹{{ s.base_price|floatformat:0 }}</td>
+            <td><span class="badge bg-success rounded-pill px-2 py-1">{{ s.status }}</span></td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">No schedules found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

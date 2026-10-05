@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile | BusGo{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row g-4">
+    <!-- Left: Profile Menu -->
+    <div class="col-lg-3">
+      <div class="card-modern p-3">
+        <div class="text-center py-3 border-bottom mb-3">
+          <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 64px; height: 64px; font-size: 1.6rem;">
+            {{ user.first_name|default:user.username|make_list|first|upper }}
+          </div>
+          <h5 class="fw-bold mb-0">{{ user.get_full_name|default:user.username }}</h5>
+          <small class="text-muted">{{ user.email }}</small>
+        </div>
+
+        <div class="d-flex flex-column gap-1">
+          <a href="{% url 'accounts:dashboard' %}" class="sidebar-link">
+            <i class="fa-solid fa-table-columns text-primary"></i> My Bookings
+          </a>
+          <a href="{% url 'accounts:profile' %}" class="sidebar-link active">
+            <i class="fa-solid fa-user text-info"></i> Profile & Passengers
+          </a>
+          <a href="{% url 'accounts:change_password' %}" class="sidebar-link">
+            <i class="fa-solid fa-key text-warning"></i> Change Password
+          </a>
+          <a href="{% url 'accounts:logout' %}" class="sidebar-link text-danger">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Profile Info & Saved Passengers -->
+    <div class="col-lg-9">
+      <!-- Personal Details Form -->
+      <div class="card-modern p-4 mb-4">
+        <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-id-card text-primary me-2"></i> Personal Details</h5>
+        <form method="POST">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">First Name</label>
+              {{ form.first_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">Last Name</label>
+              {{ form.last_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">Email Address</label>
+              {{ form.email }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">Phone Number</label>
+              {{ form.phone_number }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold text-muted">Gender</label>
+              {{ form.gender }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold text-muted">City</label>
+              {{ form.city }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold text-muted">State</label>
+              {{ form.state }}
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-bold text-muted">Address</label>
+              {{ form.address }}
+            </div>
+          </div>
+          <div class="mt-4 text-end">
+            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Save Changes</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Saved Passengers Section -->
+      <div class="card-modern p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-users text-primary me-2"></i> Saved Passengers</h5>
+          <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" data-bs-toggle="collapse" data-bs-target="#addPassengerForm">
+            <i class="fa-solid fa-plus me-1"></i> Add New Passenger
+          </button>
+        </div>
+
+        <!-- Add Passenger Collapsible Form -->
+        <div class="collapse mb-4" id="addPassengerForm">
+          <div class="p-3 bg-light rounded-4 border">
+            <h6 class="fw-bold text-dark mb-3">Add Co-Traveller</h6>
+            <form method="POST" action="{% url 'accounts:add_passenger' %}">
+              {% csrf_token %}
+              <div class="row g-3">
+                <div class="col-md-5">
+                  <label class="form-label small fw-bold text-muted">Name *</label>
+                  {{ passenger_form.name }}
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small fw-bold text-muted">Age *</label>
+                  {{ passenger_form.age }}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-muted">Gender *</label>
+                  {{ passenger_form.gender }}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-muted">ID Type</label>
+                  {{ passenger_form.id_type }}
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label small fw-bold text-muted">ID Number</label>
+                  {{ passenger_form.id_number }}
+                </div>
+              </div>
+              <div class="mt-3 text-end">
+                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold">Save Passenger</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Passenger List Table -->
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle small mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Passenger Name</th>
+                <th>Age</th>
+                <th>Gender</th>
+                <th>ID Document</th>
+                <th class="text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in saved_passengers %}
+                <tr>
+                  <td class="fw-bold text-dark">{{ p.name }}</td>
+                  <td>{{ p.age }} years</td>
+                  <td>{{ p.gender|title }}</td>
+                  <td>{{ p.get_id_type_display }}: <span class="font-monospace text-muted">{{ p.id_number|default:'N/A' }}</span></td>
+                  <td class="text-center">
+                    <a href="{% url 'accounts:delete_passenger' p.id %}" class="btn btn-sm btn-outline-danger border-0 rounded-circle" title="Delete" onclick="return confirm('Remove this passenger?');">
+                      <i class="fa-solid fa-trash-can"></i>
+                    </a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center py-4 text-muted">No saved passengers yet. Add your regular co-travellers for fast 1-click booking checkout.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

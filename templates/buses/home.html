@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block title %}BusGo Gujarat – Book Bus Tickets Online Across Gujarat | Luxury Volvo & Sleeper Buses{% endblock %}
+
+{% block content %}
+<!-- Hero Section with Sleek Search Box Focused on Gujarat -->
+<section class="hero-wrapper">
+  <div class="container position-relative" style="z-index: 2;">
+    <div class="row align-items-center mb-4">
+      <div class="col-lg-8 mx-auto text-center">
+        <div class="hero-badge-pill">
+          <i class="fa-solid fa-map-location-dot"></i> Gujarat's #1 Digital Bus Booking Platform
+        </div>
+        <h1 class="hero-title text-white mb-3">
+          Book Your Bus Ticket Across <span style="color: #38bdf8;">Gujarat</span>
+        </h1>
+        <p class="hero-subtitle mx-auto text-light opacity-75 mb-4">
+          Connecting all 33 districts of Gujarat: Ahmedabad, Surat, Vadodara, Rajkot, Bhavnagar, Bhuj, Somnath, Dwarka, Kevadia (Statue of Unity) & 270+ towns with verified luxury coaches.
+        </p>
+      </div>
+    </div>
+
+    <!-- The Search Form Box -->
+    <div class="row justify-content-center">
+      <div class="col-lg-11 col-xl-10">
+        <div class="search-widget-card">
+          <form action="{% url 'buses:search' %}" method="GET" id="searchBusForm">
+            <div class="row g-3 align-items-center">
+              <!-- From City -->
+              <div class="col-md-4 col-12">
+                <div class="search-field-box">
+                  <div class="search-field-label">
+                    <i class="fa-solid fa-location-dot text-primary"></i> From (Gujarat City)
+                  </div>
+                  <select name="origin" id="originSelect" class="form-select border-0 bg-transparent p-0 fw-bold shadow-none" required>
+                    <option value="" disabled selected>Select departure city</option>
+                    <optgroup label="🌟 Major Hubs & Pilgrimage Destinations">
+                      {% for city in popular_cities %}
+                        <option value="{{ city.name }}" {% if city.name == 'Ahmedabad' %}selected{% endif %}>
+                          {{ city.name }}{% if city.district and city.district != city.name %} ({{ city.district }}){% endif %}
+                        </option>
+                      {% endfor %}
+                    </optgroup>
+                    <optgroup label="🏛️ All Gujarat Cities & Towns (A-Z)">
+                      {% for city in cities %}
+                        <option value="{{ city.name }}">
+                          {{ city.name }}{% if city.district and city.district != city.name %} ({{ city.district }}){% endif %}
+                        </option>
+                      {% endfor %}
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Swap Button (Desktop) -->
+              <div class="col-auto d-none d-md-flex p-0">
+                <button type="button" class="swap-btn" id="swapCitiesBtn" title="Swap Origin and Destination">
+                  <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                </button>
+              </div>
+
+              <!-- To City -->
+              <div class="col-md-4 col-12">
+                <div class="search-field-box">
+                  <div class="search-field-label">
+                    <i class="fa-solid fa-location-crosshairs text-info"></i> To (Gujarat City)
+                  </div>
+                  <select name="destination" id="destinationSelect" class="form-select border-0 bg-transparent p-0 fw-bold shadow-none" required>
+                    <option value="" disabled selected>Select destination city</option>
+                    <optgroup label="🌟 Major Hubs & Pilgrimage Destinations">
+                      {% for city in popular_cities %}
+                        <option value="{{ city.name }}" {% if city.name == 'Surat' %}selected{% endif %}>
+                          {{ city.name }}{% if city.district and city.district != city.name %} ({{ city.district }}){% endif %}
+                        </option>
+                      {% endfor %}
+                    </optgroup>
+                    <optgroup label="🏛️ All Gujarat Cities & Towns (A-Z)">
+                      {% for city in cities %}
+                        <option value="{{ city.name }}">
+                          {{ city.name }}{% if city.district and city.district != city.name %} ({{ city.district }}){% endif %}
+                        </option>
+                      {% endfor %}
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Journey Date -->
+              <div class="col-md-2 col-sm-6 col-12">
+                <div class="search-field-box">
+                  <div class="search-field-label">
+                    <i class="fa-regular fa-calendar-days text-warning"></i> Journey Date
+                  </div>
+                  <input type="date" name="date" class="search-field-input" value="{{ today_str }}" min="{{ today_str }}" required>
+                </div>
+              </div>
+
+              <!-- Search Button -->
+              <div class="col-md-2 col-sm-6 col-12">
+                <button type="submit" class="btn btn-search-bus">
+                  <i class="fa-solid fa-magnifying-glass"></i> Search Buses
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Features Strip -->
+    <div class="row justify-content-center mt-5">
+      <div class="col-lg-10">
+        <div class="row g-3 text-center text-white">
+          <div class="col-6 col-md-3">
+            <div class="d-flex align-items-center justify-content-center gap-2">
+              <i class="fa-regular fa-clock fs-4 text-warning"></i>
+              <div class="text-start">
+                <div class="fw-bold small">24/7 Helpline</div>
+                <small class="text-white-50" style="font-size: 0.75rem;">Gujarat support desk</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="d-flex align-items-center justify-content-center gap-2">
+              <i class="fa-solid fa-couch fs-4 text-info"></i>
+              <div class="text-start">
+                <div class="fw-bold small">Garvi Luxury Fleets</div>
+                <small class="text-white-50" style="font-size: 0.75rem;">Volvo & Scania sleepers</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="d-flex align-items-center justify-content-center gap-2">
+              <i class="fa-solid fa-shield-halved fs-4 text-success"></i>
+              <div class="text-start">
+                <div class="fw-bold small">Safe & Concurrency-Locked</div>
+                <small class="text-white-50" style="font-size: 0.75rem;">Zero double bookings</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="d-flex align-items-center justify-content-center gap-2">
+              <i class="fa-solid fa-bolt-lightning fs-4 text-warning"></i>
+              <div class="text-start">
+                <div class="fw-bold small">Instant Refunds</div>
+                <small class="text-white-50" style="font-size: 0.75rem;">Direct wallet credits</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Removed promotional, routes, WHY-CHOOSE and popular-destinations sections per request -->
+<!-- (Trending coupons, Popular Intercity Routes, Engineered for Safe & Fast Travel, Top Cities sections removed) -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Swap cities logic
+  document.getElementById('swapCitiesBtn')?.addEventListener('click', function() {
+    const origin = document.getElementById('originSelect');
+    const destination = document.getElementById('destinationSelect');
+    const temp = origin.value;
+    origin.value = destination.value;
+    destination.value = temp;
+  });
+
+  // Copy offer code
+  document.querySelectorAll('.copy-code-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const code = this.getAttribute('data-code');
+      navigator.clipboard.writeText(code);
+      const original = this.innerHTML;
+      this.innerHTML = '<i class="fa-solid fa-check text-success"></i> Copied!';
+      setTimeout(() => { this.innerHTML = original; }, 2000);
+    });
+  });
+</script>
+{% endblock %}

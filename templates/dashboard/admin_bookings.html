@@ -1,0 +1,91 @@
+{% extends 'dashboard/admin_base.html' %}
+
+{% block title %}All Bookings | BusGo Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Customer Bookings & Tickets</h4>
+    <small class="text-muted">Track reservation transactions, verify seat numbers, and inspect digital passes</small>
+  </div>
+</div>
+
+<div class="card-modern p-4">
+  <!-- Filters & Search -->
+  <form method="GET" class="row g-2 mb-4">
+    <div class="col-md-5">
+      <div class="input-group">
+        <input type="text" name="q" class="form-control form-control-sm" placeholder="Search by PNR, customer, email, phone..." value="{{ query }}">
+        <button class="btn btn-sm btn-primary px-3" type="submit">
+          <i class="fa-solid fa-magnifying-glass"></i> Search
+        </button>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+      </select>
+    </div>
+    {% if query or status_filter %}
+      <div class="col-auto">
+        <a href="{% url 'dashboard:admin_bookings' %}" class="btn btn-sm btn-light border">Reset</a>
+      </div>
+    {% endif %}
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle small mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>PNR ID</th>
+          <th>Customer</th>
+          <th>Bus & Route</th>
+          <th>Journey Date</th>
+          <th>Seats Booked</th>
+          <th>Total Fare</th>
+          <th>Status</th>
+          <th class="text-center">Ticket</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+          <tr>
+            <td class="font-monospace fw-bold text-primary">{{ b.booking_id }}</td>
+            <td>
+              <div class="fw-bold">{{ b.customer.get_full_name|default:b.customer.username }}</div>
+              <small class="text-muted">{{ b.contact_phone }} &bull; {{ b.contact_email }}</small>
+            </td>
+            <td>
+              <div class="fw-bold text-dark">{{ b.schedule.route.origin.name }} &rarr; {{ b.schedule.route.destination.name }}</div>
+              <small class="text-muted">{{ b.schedule.bus.bus_name }}</small>
+            </td>
+            <td>{{ b.schedule.departure_date|date:"d M Y" }} ({{ b.schedule.departure_time|time:"H:i" }})</td>
+            <td>
+              <span class="badge bg-light text-dark border">{{ b.seat_numbers_display }}</span>
+            </td>
+            <td class="fw-bold text-success">₹{{ b.total_amount|floatformat:0 }}</td>
+            <td>
+              <span class="badge {% if b.booking_status == 'confirmed' %}bg-success{% elif b.booking_status == 'completed' %}bg-secondary{% else %}bg-danger{% endif %} rounded-pill px-2 py-1">
+                {{ b.booking_status }}
+              </span>
+            </td>
+            <td class="text-center">
+              <a href="{% url 'bookings:ticket' b.booking_id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3" target="_blank">
+                <i class="fa-solid fa-eye me-1"></i> View Pass
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">No bookings found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

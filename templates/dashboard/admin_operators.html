@@ -1,0 +1,78 @@
+{% extends 'dashboard/admin_base.html' %}
+
+{% block title %}Manage Bus Operators | BusGo Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Bus Operator Partners</h4>
+    <small class="text-muted">Review operator applications, approve new partners, and track ratings</small>
+  </div>
+</div>
+
+<div class="card-modern p-4">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle small mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Company Name</th>
+          <th>Reg. Number</th>
+          <th>Contact Person / Email</th>
+          <th>Phone</th>
+          <th>Headquarters</th>
+          <th>Rating</th>
+          <th>Status</th>
+          <th class="text-center">Approval Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for op in operators %}
+          <tr>
+            <td>
+              <div class="fw-bold text-dark fs-6">{{ op.company_name }}</div>
+              <small class="text-muted">User: @{{ op.user.username }}</small>
+            </td>
+            <td class="font-monospace text-muted">{{ op.registration_number }}</td>
+            <td>{{ op.contact_email }}</td>
+            <td>{{ op.contact_phone }}</td>
+            <td>{{ op.city }}, {{ op.state }}</td>
+            <td>
+              <span class="badge bg-warning text-dark fw-bold">★ {{ op.rating }}</span>
+              <small class="text-muted">({{ op.total_ratings }})</small>
+            </td>
+            <td>
+              {% if op.status == 'approved' %}
+                <span class="badge bg-success rounded-pill px-3 py-1">Approved</span>
+              {% elif op.status == 'pending' %}
+                <span class="badge bg-warning text-dark rounded-pill px-3 py-1">Pending</span>
+              {% else %}
+                <span class="badge bg-danger rounded-pill px-3 py-1">Rejected</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <form method="POST" class="d-inline-flex gap-1">
+                {% csrf_token %}
+                <input type="hidden" name="operator_id" value="{{ op.id }}">
+                {% if op.status != 'approved' %}
+                  <button type="submit" name="action" value="approve" class="btn btn-sm btn-success rounded-pill px-3">
+                    <i class="fa-solid fa-check me-1"></i> Approve
+                  </button>
+                {% endif %}
+                {% if op.status != 'rejected' %}
+                  <button type="submit" name="action" value="reject" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                    <i class="fa-solid fa-xmark me-1"></i> Reject
+                  </button>
+                {% endif %}
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">No bus operators found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,518 @@
+{% extends 'base.html' %}
+
+{% block title %}Buses from {{ origin_name|default:'All Cities' }} to {{ destination_name|default:'All Cities' }} | BusGo{% endblock %}
+
+{% block content %}
+<!-- Search Header / Top Strip -->
+<div class="bg-primary text-white py-3 border-bottom shadow-sm">
+  <div class="container">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <!-- Route Title -->
+      <div>
+        <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
+          <span>{{ origin_name|default:'Any Origin' }}</span>
+          <i class="fa-solid fa-arrow-right text-info fs-6"></i>
+          <span>{{ destination_name|default:'Any Destination' }}</span>
+        </h4>
+        <small class="text-light opacity-75">
+          <i class="fa-regular fa-calendar-days me-1"></i> {{ journey_date|date:"l, d F Y" }} &bull; {{ total_results }} Buses Available
+        </small>
+      </div>
+
+      <!-- Date Switcher and Modify button -->
+      <div class="d-flex align-items-center gap-2">
+        {% if not is_past_prev %}
+          <a href="?origin={{ origin_name }}&destination={{ destination_name }}&date={{ prev_date }}" class="btn btn-sm btn-outline-light rounded-pill px-3">
+            <i class="fa-solid fa-chevron-left me-1"></i> Prev Day
+          </a>
+        {% endif %}
+        <a href="?origin={{ origin_name }}&destination={{ destination_name }}&date={{ next_date }}" class="btn btn-sm btn-outline-light rounded-pill px-3">
+          Next Day <i class="fa-solid fa-chevron-right ms-1"></i>
+        </a>
+        <button class="btn btn-sm btn-info text-white fw-bold rounded-pill px-3" type="button" data-bs-toggle="collapse" data-bs-target="#modifySearchBox">
+          <i class="fa-solid fa-pen-to-square me-1"></i> Modify
+        </button>
+      </div>
+    </div>
+
+    <!-- Collapsible Modify Search Box -->
+    <div class="collapse mt-3" id="modifySearchBox">
+      <div class="card card-body bg-white text-dark rounded-4 shadow border-0 p-3">
+        <form method="GET" action="{% url 'buses:search' %}" class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label small fw-bold text-muted mb-1">From</label>
+            <select name="origin" class="form-select form-select-sm" required>
+              {% for c in all_cities %}
+                <option value="{{ c.name }}" {% if c.name == origin_name %}selected{% endif %}>
+                  {{ c.name }}{% if c.district and c.district != c.name %} ({{ c.district }}){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold text-muted mb-1">To</label>
+            <select name="destination" class="form-select form-select-sm" required>
+              {% for c in all_cities %}
+                <option value="{{ c.name }}" {% if c.name == destination_name %}selected{% endif %}>
+                  {{ c.name }}{% if c.district and c.district != c.name %} ({{ c.district }}){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold text-muted mb-1">Date</label>
+            <input type="date" name="date" class="form-control form-control-sm" value="{{ date_str }}" required>
+          </div>
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-sm btn-primary w-100 fw-bold">Update Results</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Search Layout: Filter Sidebar + Bus Listing -->
+<div class="container py-4">
+  <div class="row g-4">
+    <!-- Full-width Bus Cards list (filters and sort removed per request) -->
+    <div class="col-12">
+      <div class="mb-3">
+        <small class="text-muted">Filters and sort controls have been removed.</small>
+      </div>
+
+      <!-- Bus Cards Listing -->
+      {% if schedules %}
+        {% for item in schedules %}
+          <div class="bus-item-card" id="busCard-{{ item.schedule.id }}">
+            <div class="bus-header-row">
+              <!-- Operator & Type -->
+              <div style="min-width: 220px;">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="operator-title">{{ item.operator.company_name }}</div>
+                  <span class="rating-badge">★ {{ item.bus.rating }}</span>
+                </div>
+                <div class="fw-semibold text-primary small">{{ item.bus.bus_name }}</div>
+                <div class="bus-type-badge">{{ item.bus_type.name }}</div>
+                
+                <!-- Amenities icons removed per request -->
+              </div>
+
+              <!-- Timings & Duration -->
+              <div class="d-flex align-items-center gap-2">
+                <div class="text-center">
+                  <div class="time-slot">{{ item.schedule.departure_time|time:"H:i" }}</div>
+                  <div class="time-station">{{ item.route.origin.name }}</div>
+                </div>
+
+                <div class="duration-line">
+                  <span class="duration-tag">{{ item.duration }}</span>
+                  <div class="duration-arrow"></div>
+                </div>
+
+                <div class="text-center">
+                  <div class="time-slot">{{ item.schedule.arrival_time|time:"H:i" }}</div>
+                  <div class="time-station">{{ item.route.destination.name }}</div>
+                </div>
+              </div>
+
+              <!-- Price & CTA -->
+              <div class="text-end" style="min-width: 150px;">
+                <div class="price-tag">₹{{ item.schedule.base_price|floatformat:0 }}</div>
+                <div class="price-note mb-2">{{ item.available_seats }} Seats left</div>
+                
+                <button type="button" class="btn-select-seats btn-toggle-seats" data-schedule-id="{{ item.schedule.id }}">
+                  <span>Select Seats</span> <i class="fa-solid fa-chevron-down ms-1"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Inline Seat Selection Section (Initially Hidden, expanded via JS) -->
+            <div class="seat-picker-container collapse" id="seatLayout-{{ item.schedule.id }}">
+              <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="legend-pill">
+                    <div class="legend-box" style="border-color: #0284c7; background: white;"></div> Available
+                  </div>
+                  <div class="legend-pill">
+                    <div class="legend-box" style="background: #e2e8f0; border-color: #cbd5e1;"></div> Booked
+                  </div>
+                  <!-- Ladies Only legend removed per request -->
+                  <div class="legend-pill">
+                    <div class="legend-box" style="background: #10b981; border-color: #059669;"></div> Selected
+                  </div>
+                </div>
+                <button type="button" class="btn-close shadow-none btn-close-seats" data-schedule-id="{{ item.schedule.id }}" aria-label="Close"></button>
+              </div>
+
+              <div class="row g-3">
+                <!-- Bus Cabin / Seat Grid -->
+                <div class="col-lg-7">
+                  <div class="seat-deck-card">
+                    <!-- Nav Tabs for Lower / Upper Deck if Sleeper -->
+                    <ul class="nav nav-pills mb-3 deck-nav-tabs" id="deckTabs-{{ item.schedule.id }}" role="tablist">
+                      <li class="nav-item" role="presentation">
+                        <button class="nav-link active rounded-pill px-4 btn-sm" id="lower-tab-{{ item.schedule.id }}" data-bs-toggle="pill" data-bs-target="#lower-deck-{{ item.schedule.id }}" type="button" role="tab">
+                          Lower Deck
+                        </button>
+                      </li>
+                      {% if item.bus_type.has_upper_deck %}
+                        <li class="nav-item" role="presentation">
+                          <button class="nav-link rounded-pill px-4 btn-sm" id="upper-tab-{{ item.schedule.id }}" data-bs-toggle="pill" data-bs-target="#upper-deck-{{ item.schedule.id }}" type="button" role="tab">
+                            Upper Deck
+                          </button>
+                        </li>
+                      {% endif %}
+                    </ul>
+
+                    <div class="tab-content">
+                      <!-- Lower Deck -->
+                      <div class="tab-pane fade show active" id="lower-deck-{{ item.schedule.id }}" role="tabpanel">
+                        <div class="bus-cabin">
+                          <div class="steering-wheel-box">
+                            <i class="fa-solid fa-dharmachakra" title="Driver Side"></i>
+                          </div>
+                          <div class="seat-grid lower-deck-grid" id="lowerGrid-{{ item.schedule.id }}">
+                            <div class="text-center py-4 text-muted small w-100">
+                              <i class="fa-solid fa-spinner fa-spin me-2"></i> Loading layout...
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Upper Deck -->
+                      {% if item.bus_type.has_upper_deck %}
+                        <div class="tab-pane fade" id="upper-deck-{{ item.schedule.id }}" role="tabpanel">
+                          <div class="bus-cabin">
+                            <div class="steering-wheel-box">
+                              <span class="small text-muted fw-bold">UPPER BERTHS</span>
+                            </div>
+                            <div class="seat-grid upper-deck-grid" id="upperGrid-{{ item.schedule.id }}">
+                              <div class="text-center py-4 text-muted small w-100">
+                                <i class="fa-solid fa-spinner fa-spin me-2"></i> Loading layout...
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Boarding & Dropping Points + Selection Summary -->
+                <div class="col-lg-5">
+                  <div class="seat-deck-card h-100 d-flex flex-column justify-content-between">
+                    <div class="route-stop-area">
+                      <div class="mb-3">
+                        <div class="fw-bold small text-dark mb-2">Suggested boarding points</div>
+                        <div class="route-stop-list">
+                          {% for bp in item.boarding_points %}
+                            <label class="route-stop-option">
+                              <input type="radio" name="bp_{{ item.schedule.id }}" value="{{ bp.id }}" {% if forloop.first %}checked{% endif %}>
+                              <span class="route-stop-copy">
+                                <span class="route-stop-name">{{ bp.location_name }}</span>
+                                <small class="text-muted d-block">{{ bp.landmark|default:'Popular pickup point' }} • {{ bp.time_offset_minutes }} min before departure</small>
+                              </span>
+                            </label>
+                          {% empty %}
+                            <div class="small text-muted">No boarding points defined for this route yet.</div>
+                          {% endfor %}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div class="fw-bold small text-dark mb-2">Suggested dropping points</div>
+                        <div class="route-stop-list">
+                          {% for dp in item.dropping_points %}
+                            <label class="route-stop-option">
+                              <input type="radio" name="dp_{{ item.schedule.id }}" value="{{ dp.id }}" {% if forloop.first %}checked{% endif %}>
+                              <span class="route-stop-copy">
+                                <span class="route-stop-name">{{ dp.location_name }}</span>
+                                <small class="text-muted d-block">{{ dp.landmark|default:'Popular drop point' }} • {{ dp.time_offset_minutes }} min after arrival</small>
+                              </span>
+                            </label>
+                          {% empty %}
+                            <div class="small text-muted">No dropping points defined for this route yet.</div>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Price Summary Box -->
+                    <div class="bg-light p-3 rounded-3 border mt-3">
+                      <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Selected Seats:</span>
+                        <strong class="text-primary selected-seats-label" id="selectedSeatsLabel-{{ item.schedule.id }}">None</strong>
+                      </div>
+                      <div class="d-flex justify-content-between small text-muted mb-2">
+                        <span>Fare (Base + Tax + Fee):</span>
+                        <span class="fw-bold text-dark" id="totalFareLabel-{{ item.schedule.id }}">₹0</span>
+                      </div>
+                      
+                      <button type="button" class="btn btn-primary w-100 fw-bold rounded-pill btn-continue-booking" data-schedule-id="{{ item.schedule.id }}" disabled>
+                        Continue to Passenger Details &rarr;
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <!-- Empty State -->
+        <div class="card-modern p-5 text-center">
+          <div class="rounded-circle bg-light d-flex align-items-center justify-content-center text-muted mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+            <i class="fa-solid fa-bus-simple"></i>
+          </div>
+          <h4 class="fw-bold text-dark">No Buses Found on This Route</h4>
+          <p class="text-secondary small max-w-500 mx-auto mb-4">
+            We couldn't find any scheduled buses between {{ origin_name|default:'Origin' }} and {{ destination_name|default:'Destination' }} on {{ journey_date|date:"d M Y" }}. Please try adjusting your filters or search date.
+          </p>
+          <div>
+            <a href="{% url 'buses:search' %}?origin=Ahmedabad&destination=Mumbai" class="btn btn-primary rounded-pill px-4 fw-bold">
+              View Ahmedabad &rarr; Mumbai Buses
+            </a>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .route-stop-area {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .route-stop-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .route-stop-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.9rem;
+    padding: 0.7rem 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .route-stop-option:hover {
+    border-color: #c7d2fe;
+    background: #f1f5f9;
+  }
+
+  .route-stop-option:has(input:checked) {
+    border-color: #0d6efd;
+    background: #eff6ff;
+  }
+
+  .route-stop-option input {
+    margin-top: 0.2rem;
+    accent-color: #0d6efd;
+  }
+
+  .route-stop-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .route-stop-name {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #0f172a;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // State to track selected seats per schedule
+  const selectedSeatsState = {};
+
+  // Auto-submit on filter changes
+  document.querySelectorAll('.filter-input').forEach(input => {
+    input.addEventListener('change', () => {
+      document.getElementById('filterForm').submit();
+    });
+  });
+
+  // Toggle seat selection view & load seats API
+  document.querySelectorAll('.btn-toggle-seats').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const scheduleId = this.getAttribute('data-schedule-id');
+      const layoutContainer = document.getElementById(`seatLayout-${scheduleId}`);
+      
+      // Close other open seat layouts for clean accordion
+      document.querySelectorAll('.seat-picker-container.show').forEach(container => {
+        if (container.id !== `seatLayout-${scheduleId}`) {
+          const bsCol = bootstrap.Collapse.getInstance(container) || new bootstrap.Collapse(container, { toggle: false });
+          bsCol.hide();
+        }
+      });
+
+      const bsCollapse = bootstrap.Collapse.getOrCreateInstance(layoutContainer);
+      bsCollapse.toggle();
+
+      // If opening, fetch seat data if not already loaded
+      if (!layoutContainer.classList.contains('show')) {
+        loadSeatLayout(scheduleId);
+      }
+    });
+  });
+
+  // Close button inside seat layout
+  document.querySelectorAll('.btn-close-seats').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const scheduleId = this.getAttribute('data-schedule-id');
+      const layoutContainer = document.getElementById(`seatLayout-${scheduleId}`);
+      const bsCollapse = bootstrap.Collapse.getInstance(layoutContainer);
+      if (bsCollapse) bsCollapse.hide();
+    });
+  });
+
+  // Load seat data from API
+  async function loadSeatLayout(scheduleId) {
+    if (!selectedSeatsState[scheduleId]) {
+      selectedSeatsState[scheduleId] = { seats: [], basePrice: 0 };
+    }
+
+    const lowerGrid = document.getElementById(`lowerGrid-${scheduleId}`);
+    const upperGrid = document.getElementById(`upperGrid-${scheduleId}`);
+
+    try {
+      const response = await fetch(`/buses/schedule/${scheduleId}/seats/`);
+      const data = await response.json();
+      
+      selectedSeatsState[scheduleId].basePrice = data.base_price;
+
+      // Render Lower Deck
+      renderDeck(lowerGrid, data.lower_deck, scheduleId);
+
+      // Render Upper Deck if available
+      if (upperGrid && data.upper_deck) {
+        renderDeck(upperGrid, data.upper_deck, scheduleId);
+      }
+    } catch (err) {
+      console.error(err);
+      lowerGrid.innerHTML = `<div class="text-danger p-3 small">Failed to load seat layout. Please try again.</div>`;
+    }
+  }
+
+  // Render individual deck grid
+  function renderDeck(container, seats, scheduleId) {
+    if (!container || !seats) return;
+    container.innerHTML = '';
+
+    seats.forEach(s => {
+      const seatEl = document.createElement('div');
+      seatEl.className = `seat-item ${s.status} ${s.seat_type === 'sleeper' ? 'sleeper-seat' : ''}`;
+      // 'Ladies only' seat flag removed from UI per request
+
+      seatEl.setAttribute('data-seat-id', s.id);
+      seatEl.setAttribute('data-seat-num', s.seat_number);
+      seatEl.setAttribute('data-seat-price', s.price);
+      seatEl.setAttribute('data-status', s.status);
+      seatEl.setAttribute('title', `Seat ${s.seat_number} - ₹${s.price} (${s.status.toUpperCase()})`);
+
+      seatEl.innerHTML = `<span>${s.seat_number}</span>`;
+
+      // Click handler for available seats
+      if (s.status === 'available') {
+        seatEl.addEventListener('click', function() {
+          toggleSeatSelection(this, scheduleId);
+        });
+      }
+
+      container.appendChild(seatEl);
+    });
+  }
+
+  // Toggle Seat Selection logic
+  function toggleSeatSelection(el, scheduleId) {
+    const seatId = parseInt(el.getAttribute('data-seat-id'));
+    const seatNum = el.getAttribute('data-seat-num');
+    const seatPrice = parseFloat(el.getAttribute('data-seat-price'));
+
+    const state = selectedSeatsState[scheduleId];
+    const existingIndex = state.seats.findIndex(s => s.id === seatId);
+
+    if (existingIndex > -1) {
+      // Deselect
+      state.seats.splice(existingIndex, 1);
+      el.classList.remove('selected');
+    } else {
+      // Max 6 seats per booking
+      if (state.seats.length >= 6) {
+        alert("You can select a maximum of 6 seats per booking.");
+        return;
+      }
+      // Select
+      state.seats.push({ id: seatId, number: seatNum, price: seatPrice });
+      el.classList.add('selected');
+    }
+
+    updatePriceSummary(scheduleId);
+  }
+
+  // Update Summary UI
+  function updatePriceSummary(scheduleId) {
+    const state = selectedSeatsState[scheduleId];
+    const seatsLabel = document.getElementById(`selectedSeatsLabel-${scheduleId}`);
+    const fareLabel = document.getElementById(`totalFareLabel-${scheduleId}`);
+    const continueBtn = document.querySelector(`.btn-continue-booking[data-schedule-id="${scheduleId}"]`);
+
+    if (state.seats.length === 0) {
+      seatsLabel.innerText = "None";
+      fareLabel.innerText = "₹0";
+      continueBtn.disabled = true;
+    } else {
+      const numbers = state.seats.map(s => s.number).join(', ');
+      seatsLabel.innerText = `${state.seats.length} (${numbers})`;
+
+      const baseTotal = state.seats.reduce((acc, curr) => acc + curr.price, 0);
+      const tax = baseTotal * 0.05;
+      const convenience = 20.00;
+      const grandTotal = Math.round(baseTotal + tax + convenience);
+
+      fareLabel.innerText = `₹${grandTotal} (incl. 5% tax)`;
+      continueBtn.disabled = false;
+    }
+  }
+
+  // Continue to Passenger Details
+  document.querySelectorAll('.btn-continue-booking').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const scheduleId = this.getAttribute('data-schedule-id');
+      const state = selectedSeatsState[scheduleId];
+      if (!state || state.seats.length === 0) return;
+
+      const seatIds = state.seats.map(s => s.id).join(',');
+      
+      const bpRadio = document.querySelector(`input[name="bp_${scheduleId}"]:checked`);
+      const dpRadio = document.querySelector(`input[name="dp_${scheduleId}"]:checked`);
+      
+      const bpId = bpRadio ? bpRadio.value : '';
+      const dpId = dpRadio ? dpRadio.value : '';
+
+      window.location.href = `/bookings/passenger-details/${scheduleId}/?seats=${seatIds}&bp=${bpId}&dp=${dpId}`;
+    });
+  });
+</script>
+{% endblock %}

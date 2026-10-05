@@ -1,0 +1,121 @@
+{% extends 'operators/operator_base.html' %}
+
+{% block title %}Operator Dashboard | BusGo{% endblock %}
+
+{% block operator_content %}
+<div class="mb-4">
+  <h3 class="fw-bold text-dark mb-1">{{ operator.company_name }} Portal</h3>
+  <small class="text-muted">Manage fleet operations, departures, conductor manifests, and earnings</small>
+</div>
+
+<!-- Operator KPI Cards -->
+<div class="row g-4 mb-4">
+  <!-- 1. Total Fleet Buses -->
+  <div class="col-md-3">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-lbl">Buses in Fleet</div>
+        <div class="kpi-val text-primary">{{ buses_count }}</div>
+      </div>
+      <div class="kpi-icon bg-primary-subtle text-primary">
+        <i class="fa-solid fa-bus"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Active Trips Today -->
+  <div class="col-md-3">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-lbl">Trips Scheduled Today</div>
+        <div class="kpi-val text-warning">{{ active_trips_today }}</div>
+      </div>
+      <div class="kpi-icon bg-warning-subtle text-warning">
+        <i class="fa-solid fa-calendar-day"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Passengers Carried -->
+  <div class="col-md-3">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-lbl">Passengers Carried</div>
+        <div class="kpi-val text-info">{{ total_passengers }}</div>
+      </div>
+      <div class="kpi-icon bg-info-subtle text-info">
+        <i class="fa-solid fa-users"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Net Earnings -->
+  <div class="col-md-3">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-lbl">Net Payout (90%)</div>
+        <div class="kpi-val text-success">₹{{ net_earnings|floatformat:0 }}</div>
+      </div>
+      <div class="kpi-icon bg-success-subtle text-success">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Trips and Conductor Manifest Link -->
+<div class="card-modern p-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="fw-bold text-dark mb-0">Upcoming Bus Departures & Passenger Manifests</h5>
+    <a href="{% url 'operators:operator_schedules' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+      View All Schedules &rarr;
+    </a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle small mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Bus Fleet / Reg Number</th>
+          <th>Route</th>
+          <th>Departure Date & Time</th>
+          <th>Est. Arrival</th>
+          <th>Ticket Fare</th>
+          <th class="text-center">Conductor Sheet</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in recent_schedules %}
+          <tr>
+            <td>
+              <div class="fw-bold text-dark">{{ s.bus.bus_name }}</div>
+              <span class="badge bg-light text-primary border font-monospace">{{ s.bus.bus_number }}</span>
+            </td>
+            <td>
+              <span class="fw-bold text-primary">{{ s.route.origin.name }} &rarr; {{ s.route.destination.name }}</span>
+            </td>
+            <td>
+              <div>{{ s.departure_date|date:"d M Y" }}</div>
+              <strong>{{ s.departure_time|time:"H:i" }}</strong>
+            </td>
+            <td>
+              <div>{{ s.arrival_date|date:"d M Y" }}</div>
+              <strong>{{ s.arrival_time|time:"H:i" }}</strong>
+            </td>
+            <td class="fw-bold text-success fs-6">₹{{ s.base_price|floatformat:0 }}</td>
+            <td class="text-center">
+              <a href="{% url 'operators:operator_manifest' s.id %}" class="btn btn-sm btn-outline-dark rounded-pill px-3 fw-bold" target="_blank">
+                <i class="fa-solid fa-clipboard-list me-1 text-primary"></i> Print Passenger Manifest
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">No scheduled trips found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

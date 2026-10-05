@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}BusGo Admin Portal{% endblock %}</title>
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5.3 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- BusGo CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-light">
+
+  <!-- Top Admin Navbar -->
+  <header class="bg-white border-bottom py-2 sticky-top shadow-sm" style="z-index: 1040;">
+    <div class="container-fluid px-4 d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-3">
+        <a class="brand-logo" href="{% url 'dashboard:admin_dashboard' %}">
+          <div class="brand-icon">
+            <i class="fa-solid fa-bus"></i>
+          </div>
+          <div>Bus<span>Go</span> <span class="badge bg-danger rounded-pill fs-6 py-1 px-2">ADMIN</span></div>
+        </a>
+      </div>
+
+      <div class="d-flex align-items-center gap-3">
+        <a href="{% url 'home' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3" target="_blank">
+          <i class="fa-solid fa-globe me-1"></i> View Website
+        </a>
+        <div class="d-flex align-items-center gap-2">
+          <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-weight: bold;">
+            A
+          </div>
+          <span class="small fw-bold text-dark">{{ user.username }}</span>
+          <a href="{% url 'accounts:logout' %}" class="btn btn-sm btn-outline-danger border-0 rounded-circle" title="Logout">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Layout: Sidebar + Main Content -->
+  <div class="dashboard-layout">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <small class="text-muted text-uppercase fw-bold px-3 mb-1" style="font-size: 0.7rem;">Main Menu</small>
+      <a href="{% url 'dashboard:admin_dashboard' %}" class="sidebar-link {% if request.path == '/dashboard/admin/' %}active{% endif %}">
+        <i class="fa-solid fa-chart-pie"></i> Overview Dashboard
+      </a>
+      <a href="{% url 'dashboard:admin_customers' %}" class="sidebar-link {% if '/customers/' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-users"></i> Customers
+      </a>
+      <a href="{% url 'dashboard:admin_operators' %}" class="sidebar-link {% if '/operators/' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-building-user"></i> Bus Operators
+      </a>
+      <a href="{% url 'dashboard:admin_buses' %}" class="sidebar-link {% if '/buses/' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-bus"></i> Bus Fleets
+      </a>
+      <a href="{% url 'dashboard:admin_routes' %}" class="sidebar-link {% if '/routes/' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-route"></i> Travel Routes
+      </a>
+      <a href="{% url 'dashboard:admin_schedules' %}" class="sidebar-link {% if '/schedules/' in request.path %}active{% endif %}">
+        <i class="fa-regular fa-calendar-check"></i> Bus Schedules
+      </a>
+
+      <small class="text-muted text-uppercase fw-bold px-3 mt-3 mb-1" style="font-size: 0.7rem;">Operations & Reports</small>
+      <a href="{% url 'dashboard:admin_bookings' %}" class="sidebar-link {% if '/bookings/' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-ticket"></i> All Bookings
+      </a>
+      <a href="{% url 'dashboard:admin_reports' %}" class="sidebar-link {% if '/reports/' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-file-invoice-dollar"></i> Financial Reports
+      </a>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="dashboard-content">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show rounded-4 border-0 shadow-sm" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {% block admin_content %}{% endblock %}
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
