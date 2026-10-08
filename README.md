@@ -113,19 +113,31 @@ python manage.py seed_data
 ```
 
 ### 5. SMTP Ticket Email Setup (Optional)
-To send confirmed bus tickets via email using SMTP, add your mail server details in `.env`:
+To send confirmed bus tickets via SMTP, copy `.env.example` to `.env` in the project root and set your mail server details:
+
+```powershell
+Copy-Item .env.example .env
+```
 
 ```env
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
 EMAIL_HOST_USER=your_email@gmail.com
 EMAIL_HOST_PASSWORD=your_app_password
-DEFAULT_FROM_EMAIL=BusGo Support <no-reply@busgo.com>
+DEFAULT_FROM_EMAIL=BusGo Support <your_email@gmail.com>
 ```
 
-When SMTP is configured, the app automatically sends the generated PDF ticket and QR code to the customer email after a successful booking.
+For Gmail, use a Google **App Password** (with 2-Step Verification enabled), not your regular account password. Keep `.env` private and never commit it. After saving the settings, restart the Django server.
+
+Test the SMTP connection by sending a test email:
+```bash
+python manage.py sendtestemail your_email@example.com
+```
+
+After a successful booking, the app automatically sends the generated PDF ticket and QR code to the passenger email address (or the booking contact email if passenger emails are not provided). SMTP send failures are logged by the server; they do not undo a confirmed booking.
 
 ### 6. Run the Server
 ```bash

@@ -404,8 +404,17 @@ def cancel_booking_view(request, booking_id):
             notify_user(
                 user=booking.customer,
                 title="Booking Cancelled & Refund Processed",
-                message=f"Booking {booking.booking_id} was cancelled. Refund of ₹{refund_amount} has been added to your store credit.",
-                notification_type='cancellation'
+                message=(
+                    f"Booking {booking.booking_id} for "
+                    f"{booking.schedule.route.origin.name} to "
+                    f"{booking.schedule.route.destination.name} on "
+                    f"{booking.schedule.departure_date:%d %b %Y} was cancelled. "
+                    f"Cancellation reason: {reason}. "
+                    f"Cancellation fee: ₹{cancellation_fee}. "
+                    f"Refund of ₹{refund_amount} has been added to your store credit."
+                ),
+                notification_type='cancellation',
+                link=f"/bookings/ticket/{booking.booking_id}/"
             )
 
         messages.success(request, f"Booking cancelled. ₹{refund_amount} added to your store credit.")

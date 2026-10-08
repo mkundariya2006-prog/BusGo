@@ -66,6 +66,23 @@
 
 <!-- Schedules List -->
 <div class="card-modern p-4">
+  <form method="GET" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+      <label for="schedule-date-filter" class="form-label small fw-bold text-muted mb-1">Show schedules for a date</label>
+      <input id="schedule-date-filter" type="date" name="date" class="form-control form-control-sm"
+             value="{{ date_filter }}">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill">Filter</button>
+      {% if date_filter %}
+        <a href="{% url 'dashboard:admin_schedules' %}" class="btn btn-sm btn-outline-secondary rounded-pill">Upcoming</a>
+      {% endif %}
+    </div>
+    <div class="col text-muted small text-md-end">
+      {% if date_filter %}Schedules on {{ date_filter }}{% else %}Upcoming schedules, starting today{% endif %}
+      &bull; Page {{ schedules.number }} of {{ schedules.paginator.num_pages }}
+    </div>
+  </form>
   <div class="table-responsive">
     <table class="table table-hover align-middle small mb-0">
       <thead class="table-light">
@@ -77,6 +94,7 @@
           <th>Duration</th>
           <th>Base Fare</th>
           <th>Status</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -99,15 +117,55 @@
             </td>
             <td><span class="badge bg-light text-dark border">{{ s.duration_display }}</span></td>
             <td class="fw-bold text-success fs-6">₹{{ s.base_price|floatformat:0 }}</td>
-            <td><span class="badge bg-success rounded-pill px-2 py-1">{{ s.status }}</span></td>
+            <td>
+              {% if s.status == 'cancelled' %}
+                <span class="badge bg-danger rounded-pill px-2 py-1">{{ s.get_status_display }}</span>
+              {% elif s.status == 'completed' %}
+                <span class="badge bg-secondary rounded-pill px-2 py-1">{{ s.get_status_display }}</span>
+              {% elif s.status == 'running' %}
+                <span class="badge bg-warning text-dark rounded-pill px-2 py-1">{{ s.get_status_display }}</span>
+              {% else %}
+                <span class="badge bg-success rounded-pill px-2 py-1">{{ s.get_status_display }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if s.status == 'scheduled' or s.status == 'running' %}
+                <form method="POST" action="{% url 'dashboard:admin_cancel_schedule' s.id %}"
+                      onsubmit="return confirm('Cancel this bus schedule? Existing bookings will remain unchanged.');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">
+                    <i class="fa-solid fa-ban me-1"></i> Cancel Bus
+                  </button>
+                </form>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
           </tr>
         {% empty %}
           <tr>
-            <td colspan="7" class="text-center py-4 text-muted">No schedules found.</td>
+            <td colspan="8" class="text-center py-4 text-muted">No schedules found.</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% if schedules.has_other_pages %}
+    <nav class="d-flex justify-content-between align-items-center mt-3" aria-label="Schedule pages">
+      <div>
+        {% if schedules.has_previous %}
+          <a class="btn btn-sm btn-outline-secondary rounded-pill"
+             href="?page={{ schedules.previous_page_number }}{% if date_filter %}&amp;date={{ date_filter }}{% endif %}">Previous</a>
+        {% endif %}
+      </div>
+      <span class="small text-muted">Page {{ schedules.number }} of {{ schedules.paginator.num_pages }}</span>
+      <div>
+        {% if schedules.has_next %}
+          <a class="btn btn-sm btn-outline-secondary rounded-pill"
+             href="?page={{ schedules.next_page_number }}{% if date_filter %}&amp;date={{ date_filter }}{% endif %}">Next</a>
+        {% endif %}
+      </div>
+    </nav>
+  {% endif %}
 </div>
 {% endblock %}

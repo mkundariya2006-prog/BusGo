@@ -1,5 +1,6 @@
 import datetime
 from decimal import Decimal
+from django.core import mail
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -224,6 +225,13 @@ class BusGoSystemTests(TestCase):
 
         booking.refresh_from_db()
         self.assertEqual(booking.booking_status, 'cancelled')
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.user.email])
+        self.assertIn('Booking Cancelled', mail.outbox[0].subject)
+        self.assertIn(booking.booking_id, mail.outbox[0].body)
+        self.assertIn('Change of plans', mail.outbox[0].body)
+        self.assertIn('Refund of ₹', mail.outbox[0].body)
 
         # Verify seat released back to available
         self.ss1.refresh_from_db()

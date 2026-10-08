@@ -23,3 +23,6 @@ venv.bak/
 # Media and Static files
 media/
 staticfiles/
+
+# Extracted archives / duplicates
+BusGo-main/

@@ -1,5 +1,6 @@
 import os
 import io
+import logging
 import qrcode
 from django.conf import settings
 from django.core.mail import EmailMessage
@@ -12,6 +13,8 @@ from reportlab.platypus import (
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 from decimal import Decimal, ROUND_HALF_UP
+
+logger = logging.getLogger(__name__)
 
 def generate_booking_qr(booking):
     """
@@ -106,6 +109,10 @@ def send_booking_ticket_email(booking):
     try:
         return email.send(fail_silently=False) > 0
     except Exception:
+        logger.exception(
+            "Failed to send ticket confirmation email for booking %s",
+            booking.booking_id,
+        )
         return False
 
 

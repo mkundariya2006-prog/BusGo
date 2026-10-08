@@ -1,7 +1,11 @@
+import logging
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 class Notification(models.Model):
     TYPE_CHOICES = (
@@ -47,8 +51,12 @@ def notify_user(user, title, message, notification_type='system', link='', send_
                 message=f"Hello {user.get_full_name() or user.username},\n\n{message}\n\nThank you for choosing BusGo!\nSafe Travels,\nTeam BusGo",
                 from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@busgo.com'),
                 recipient_list=[user.email],
-                fail_silently=True,
+                fail_silently=False,
             )
         except Exception:
-            pass
+            logger.exception(
+                "Failed to send %s notification email to user %s",
+                title,
+                user.pk,
+            )
     return notif

@@ -1,18 +1,28 @@
 import json
+import logging
 from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.conf import settings
+from django.core.mail import send_mail
+from django.core.paginator import Paginator
 from django.db.models import Sum, Count, Q
+from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from accounts.models import CustomerProfile
 from operators.models import BusOperator
 from buses.models import Bus, BusType, Seat
 from routes.models import City, Route, BusSchedule, BoardingPoint, DroppingPoint
 from bookings.models import Booking, Passenger, Cancellation, Refund, ScheduleSeatStatus
+from notifications.models import notify_user
 from payments.models import Payment
+
+logger = logging.getLogger(__name__)
+
 
 def is_admin_user(user):
     return user.is_authenticated and (user.is_staff or user.is_superuser)
@@ -206,9 +216,35 @@ def admin_routes_view(request):
 
 @user_passes_test(is_admin_user, login_url='/accounts/login/')
 def admin_schedules_view(request):
+    departure_cutoff = timezone.localtime(timezone.now() + timedelta(hours=2))
+    today = departure_cutoff.date()
+
+    def upcoming_departures(queryset):
+        return queryset.filter(
+            Q(departure_date__gt=today) |
+            Q(departure_date=today, departure_time__gte=departure_cutoff.time())
+        )
+
+    date_filter = request.GET.get('date', '').strip()
     schedules = BusSchedule.objects.select_related(
         'bus', 'bus__operator', 'route', 'route__origin', 'route__destination'
-    ).order_by('-departure_date', 'departure_time')[:100]
+    )
+    if date_filter:
+        selected_date = parse_date(date_filter)
+        if selected_date:
+            schedules = schedules.filter(departure_date=selected_date)
+            if selected_date == today:
+                schedules = upcoming_departures(schedules)
+        else:
+            messages.error(request, "Enter a valid schedule date.")
+            date_filter = ''
+            schedules = upcoming_departures(schedules)
+    else:
+        schedules = upcoming_departures(schedules)
+    schedules = Paginator(
+        schedules.order_by('departure_date', 'departure_time', 'id'),
+        50,
+    ).get_page(request.GET.get('page'))
 
     buses = Bus.objects.filter(is_active=True)
     routes = Route.objects.filter(is_active=True)
@@ -241,9 +277,118 @@ def admin_schedules_view(request):
 
     return render(request, 'dashboard/admin_schedules.html', {
         'schedules': schedules,
+        'date_filter': date_filter,
         'buses': buses,
         'routes': routes,
     })
+
+
+@user_passes_test(is_admin_user, login_url='/accounts/login/')
+@require_POST
+def admin_cancel_schedule_view(request, schedule_id):
+    schedule = get_object_or_404(BusSchedule, pk=schedule_id)
+    if schedule.status in ('scheduled', 'running'):
+        schedule.status = 'cancelled'
+        schedule.save(update_fields=['status', 'updated_at'])
+
+        customer_bookings = {}
+        recipient_bookings = {}
+        bookings = Booking.objects.filter(
+            schedule=schedule,
+            booking_status__in=('pending', 'confirmed'),
+        ).select_related('customer').prefetch_related('passengers')
+        for booking in bookings:
+            customer_bookings.setdefault(booking.customer, []).append(booking.booking_id)
+            recipient_emails = {
+                email.strip().lower()
+                for email in (
+                    booking.customer.email,
+                    booking.contact_email,
+                    *(passenger.email for passenger in booking.passengers.all()),
+                )
+                if email and email.strip()
+            }
+            for email in recipient_emails:
+                recipient_bookings.setdefault(email, set()).add(booking.booking_id)
+
+        for customer, booking_ids in customer_bookings.items():
+            booking_references = ', '.join(booking_ids)
+            notify_user(
+                user=customer,
+                title="Bus Schedule Cancelled",
+                message=(
+                    f"We're sorry, but your bus "
+                    f"{schedule.bus.bus_name} ({schedule.bus.bus_number}) from "
+                    f"{schedule.route.origin.name} to {schedule.route.destination.name} "
+                    f"on {schedule.departure_date:%d %b %Y} at "
+                    f"{schedule.departure_time:%I:%M %p} has been cancelled. "
+                    f"Affected booking(s): {booking_references}. "
+                    "Please book another available bus for your journey. If you paid "
+                    "online, your refund will be credited to your original payment "
+                    "method within 3-4 working days."
+                ),
+                notification_type='cancellation',
+                link='/accounts/dashboard/',
+                send_email_copy=False,
+            )
+
+        email_failures = 0
+        emails_sent = 0
+        for email, booking_ids in recipient_bookings.items():
+            booking_references = ', '.join(sorted(booking_ids))
+            subject = f"BusGo bus cancellation - booking {booking_references}"
+            message = (
+                "Hello,\n\n"
+                f"We're sorry, but your bus {schedule.bus.bus_name} "
+                f"({schedule.bus.bus_number}) from {schedule.route.origin.name} to "
+                f"{schedule.route.destination.name} on "
+                f"{schedule.departure_date:%d %b %Y} at "
+                f"{schedule.departure_time:%I:%M %p} has been cancelled.\n\n"
+                f"Affected booking(s): {booking_references}.\n"
+                "Please book another available bus for your journey. If you paid "
+                "online, your refund will be credited to your original payment "
+                "method within 3-4 working days.\n\n"
+                "Thank you for choosing BusGo."
+            )
+            try:
+                sent = send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+                if sent:
+                    emails_sent += 1
+                else:
+                    email_failures += 1
+                    logger.error(
+                        "Email backend did not send schedule cancellation email "
+                        "for schedule %s to %s",
+                        schedule.pk,
+                        email,
+                    )
+            except Exception:
+                email_failures += 1
+                logger.exception(
+                    "Failed to send schedule cancellation email for schedule %s "
+                    "to %s",
+                    schedule.pk,
+                    email,
+                )
+
+        messages.success(
+            request,
+            f"Schedule for {schedule.bus.bus_name} on {schedule.departure_date:%d %b %Y} cancelled. In-app alerts were created and {emails_sent} cancellation email(s) sent. Existing bookings were not changed.",
+        )
+        if email_failures:
+            messages.warning(
+                request,
+                f"{email_failures} cancellation email(s) could not be sent. Check the email settings and server logs.",
+            )
+    else:
+        messages.warning(request, f"This schedule cannot be cancelled because its status is {schedule.get_status_display().lower()}.")
+    return redirect('dashboard:admin_schedules')
 
 
 @user_passes_test(is_admin_user, login_url='/accounts/login/')

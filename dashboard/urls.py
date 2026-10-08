@@ -11,6 +11,7 @@ urlpatterns = [
     path('admin/buses/', views.admin_buses_view, name='admin_buses'),
     path('admin/routes/', views.admin_routes_view, name='admin_routes'),
     path('admin/schedules/', views.admin_schedules_view, name='admin_schedules'),
+    path('admin/schedules/<int:schedule_id>/cancel/', views.admin_cancel_schedule_view, name='admin_cancel_schedule'),
     path('admin/bookings/', views.admin_bookings_view, name='admin_bookings'),
     path('admin/reports/', views.admin_reports_view, name='admin_reports'),
 ]
